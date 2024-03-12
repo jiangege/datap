@@ -1,5 +1,5 @@
-const path = require("path");
-const { ObjectId, MongoClient } = require("mongodb");
+import path from "path";
+import { ObjectId, MongoClient } from "mongodb";
 class MongoConnector {
   #url = "";
   #dbName = "";
@@ -26,7 +26,6 @@ class MongoConnector {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log("Connected to MongoDB");
     this.#db = this.#mongoClient.db(dbName ?? this.#dbName);
   }
 
@@ -151,7 +150,7 @@ class MongoConnector {
     const { id, ...restDoc } = doc;
     return db.collection(coll).updateOne(
       {
-        _id: ObjectId(id),
+        _id: new ObjectId(id),
       },
       {
         $set: { ...restDoc },
