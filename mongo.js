@@ -1,5 +1,5 @@
-import path from "path";
-import { ObjectId, MongoClient } from "mongodb";
+const path = require("path");
+const { MongoClient, ObjectId } = require("mongodb");
 class MongoConnector {
   #url = "";
   #dbName = "";
