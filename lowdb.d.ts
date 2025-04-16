@@ -1,18 +1,23 @@
-import { MongoClient, ObjectId } from "mongodb";
+import { ObjectId } from "mongodb";
 
-declare class MongoConnector {
-  constructor(url: string, dbName: string, options?: Record<string, any>);
+interface LowDbResult {
+  data: Record<string, any>[];
+  write: () => Promise<void>;
+}
+
+declare class LowDbConnector {
+  constructor(dbPath: string);
   
-  connect(url?: string, dbName?: string, options?: Record<string, any>): Promise<void>;
-  db(dbName?: string): Promise<any>;
+  connect(): Promise<void>;
+  collection(name: string): Promise<LowDbResult>;
   
   createOne(coll: string, doc: Record<string, any>): Promise<{
-    insertedId: ObjectId;
+    insertedId: string;
   }>;
   
   createMany(coll: string, docs: Record<string, any>[]): Promise<{
     insertedCount: number;
-    insertedIds: ObjectId[];
+    insertedIds: string[];
   }>;
   
   findOne(coll: string, query: Record<string, any>, sort?: Record<string, number>): Promise<Record<string, any> | null>;
@@ -26,7 +31,7 @@ declare class MongoConnector {
     sort?: Record<string, number>
   ): Promise<Record<string, any>[]>;
   
-  updateOne(coll: string, doc: Record<string, any> & { id: string }): Promise<{
+  updateOne(coll: string, doc: Record<string, any> & { _id: string }): Promise<{
     matchedCount: number;
     modifiedCount: number;
   }>;
@@ -40,8 +45,9 @@ declare class MongoConnector {
     modifiedCount: number;
   }>;
   
-  upsertOne(coll: string, doc: Record<string, any> & { key: string }): Promise<{
-    upsertedId?: ObjectId;
+  upsertOne(coll: string, doc: Record<string, any> & { key?: string }): Promise<{
+    upsertedId?: string;
+    upsertedCount?: number;
     matchedCount?: number;
     modifiedCount?: number;
   }>;
@@ -57,6 +63,8 @@ declare class MongoConnector {
   count(coll: string, q?: Record<string, any>): Promise<number>;
   
   close(): Promise<void>;
+  
+  private matchQuery(doc: Record<string, any>, query: Record<string, any>): boolean;
 }
 
-export default MongoConnector; 
+export default LowDbConnector; 

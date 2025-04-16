@@ -1,7 +1,11 @@
-const MongoConnector = require("./mongo");
+import MongoConnector from "./mongo.js";
+import LowDbConnector from "./lowdb.js";
 
-module.exports = (config) => {
-  return {
-    mongo: config?.mongo ? new MongoConnector(config.mongo) : null,
-  };
-};
+export default function Datap(config = {}) {
+  if (config.mongo) { 
+    Datap.mongo = new MongoConnector(config.mongo.url, config.mongo.dbName, config.mongo.options);
+  }
+  if (config.lowdb) {
+    Datap.low = new LowDbConnector(config.lowdb.dbPath);
+  }
+}

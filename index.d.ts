@@ -1,11 +1,26 @@
-import { MongoConnector } from './mongo';
+import MongoConnector from "./mongo";
+import LowDbConnector from "./lowdb";
 
-interface Config {
-  mongo?: string | { url: string; dbName: string };
+interface MongoConfig {
+  url: string;
+  dbName: string;
+  options?: Record<string, any>;
 }
 
-declare function createConnector(config?: Config): {
-  mongo: MongoConnector | null;
-};
+interface LowDbConfig {
+  dbPath: string;
+}
 
-export = createConnector; 
+interface DatapConfig {
+  mongo?: MongoConfig;
+  lowdb?: LowDbConfig;
+}
+
+declare function Datap(config?: DatapConfig): void;
+
+declare namespace Datap {
+  export let mongo: MongoConnector;
+  export let low: LowDbConnector;
+}
+
+export default Datap; 

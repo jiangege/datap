@@ -1,119 +1,142 @@
-# MongoDB Connector
+# Datap
 
-A lightweight MongoDB connector for Node.js applications that provides a simplified interface for common database operations.
+Datap is a lightweight database abstraction layer for Node.js that provides a unified API for both MongoDB and LowDB. It allows you to easily switch between databases or use both simultaneously with minimal code changes.
+
+## Features
+
+- 🌐 MongoDB support for cloud or local server-based applications
+- 📁 LowDB support for file-based JSON storage
+- 🔄 Consistent API across both database types
+- 🔍 Simple query interface with MongoDB-like syntax
+- ⚙️ Easy configuration and setup
 
 ## Installation
 
 ```bash
-npm install @jiangege47/datap
+npm install datap
 ```
 
-## Usage
+## Configuration
 
 ```javascript
-// Import the connector factory
-const createConnector = require('@jiangege47/datap');
+import Datap from 'datap';
 
-// Initialize with configuration
-const connector = createConnector({
+// Initialize with MongoDB
+Datap({
+  mongo: {
+    url: 'mongodb://localhost:27017',
+    dbName: 'myDatabase',
+    options: { /* MongoDB client options */ }
+  }
+});
+
+// Initialize with LowDB
+Datap({
+  lowdb: {
+    dbPath: './data' // Directory to store JSON files
+  }
+});
+
+// Or use both
+Datap({
+  mongo: {
+    url: 'mongodb://localhost:27017',
+    dbName: 'myDatabase'
+  },
+  lowdb: {
+    dbPath: './data'
+  }
+});
+```
+
+## Usage Examples
+
+### MongoDB Operations
+
+```javascript
+import Datap from 'datap';
+
+// Configure MongoDB connection
+Datap({
   mongo: {
     url: 'mongodb://localhost:27017',
     dbName: 'myDatabase'
   }
 });
 
-// Connect to MongoDB
-async function main() {
-  await connector.mongo.connect();
-  
-  // Now you can perform database operations
-  // ...
-}
-
-main().catch(console.error);
-```
-
-## Available Methods
-
-The MongoDB connector provides the following methods:
-
-### Connection
-
-- `connect(url, dbName)`: Connect to MongoDB database
-- `db(dbName)`: Get database instance or connect to a specific database
-
-### Create Operations
-
-- `create(collection, document)`: Insert a single document
-- `createmany(collection, documents)`: Insert multiple documents
-
-### Read Operations
-
-- `readone(collection, query, sort)`: Get a single document matching the query
-- `readid(collection, id)`: Get a document by its ID
-- `read(collection, query, limit, skip, sort)`: Get documents matching the query with pagination
-- `count(collection, query)`: Count documents matching the query
-
-### Update Operations
-
-- `update(collection, document)`: Update a document by ID
-- `updatemany(collection, query, document)`: Update multiple documents matching the query
-- `upsert(collection, document)`: Insert or update a document based on a key
-
-### Delete Operations
-
-- `delete(collection, id)`: Delete a document by ID
-- `deletequery(collection, query)`: Delete documents matching the query
-
-## Examples
-
-### Create a document
-
-```javascript
-const result = await connector.mongo.create('users', {
-  name: 'John Doe',
-  email: 'john@example.com',
-  createdAt: new Date()
+// Create a document
+await Datap.mongo.createOne('users', { 
+  name: 'John Doe', 
+  email: 'john@example.com' 
 });
-console.log(`Inserted ID: ${result.insertedId}`);
-```
 
-### Read documents
+// Find documents
+const users = await Datap.mongo.find('users', { name: 'John Doe' });
 
-```javascript
-// Find all active users, limit to 10
-const users = await connector.mongo.read('users', { active: true }, 10);
-console.log(`Found ${users.length} active users`);
-
-// Find user by ID
-const user = await connector.mongo.readid('users', '507f1f77bcf86cd799439011');
-```
-
-### Update a document
-
-```javascript
-const updateResult = await connector.mongo.update('users', {
-  id: '507f1f77bcf86cd799439011',
-  active: false
+// Update a document
+await Datap.mongo.updateOne('users', { 
+  id: '60d21b4667d0d8992e610c85',
+  email: 'john.updated@example.com' 
 });
-console.log(`Modified ${updateResult.modifiedCount} document(s)`);
+
+// Delete a document
+await Datap.mongo.deleteOne('users', '60d21b4667d0d8992e610c85');
 ```
 
-### Delete documents
+### LowDB Operations
 
 ```javascript
-// Delete by ID
-await connector.mongo.delete('users', '507f1f77bcf86cd799439011');
+import Datap from 'datap';
 
-// Delete by query
-await connector.mongo.deletequery('users', { active: false });
+// Configure LowDB
+Datap({
+  lowdb: {
+    dbPath: './data'
+  }
+});
+
+// Create a document
+await Datap.low.createOne('users', { 
+  name: 'Jane Doe', 
+  email: 'jane@example.com' 
+});
+
+// Find documents
+const users = await Datap.low.find('users', { name: 'Jane Doe' });
+
+// Update a document
+await Datap.low.updateOne('users', { 
+  _id: '60d21b4667d0d8992e610c85',
+  email: 'jane.updated@example.com' 
+});
+
+// Delete a document
+await Datap.low.deleteOne('users', '60d21b4667d0d8992e610c85');
 ```
 
-## TypeScript Support
+## API Reference
 
-This package includes TypeScript definitions, providing autocompletion and type checking even in JavaScript projects in editors that support it (like VSCode).
+Both MongoDB and LowDB connectors support the following methods:
 
-## Requirements
+| Method | Description |
+|--------|-------------|
+| `createOne(collection, document)` | Create a single document |
+| `createMany(collection, documents)` | Create multiple documents |
+| `findOne(collection, query, sort)` | Find a single document |
+| `findById(collection, id)` | Find a document by ID |
+| `find(collection, query, limit, skip, sort)` | Find multiple documents |
+| `updateOne(collection, document)` | Update a single document |
+| `updateMany(collection, query, update)` | Update multiple documents |
+| `upsertOne(collection, document)` | Insert or update a document |
+| `deleteOne(collection, id)` | Delete a single document |
+| `deleteMany(collection, query)` | Delete multiple documents |
+| `count(collection, query)` | Count documents matching a query |
+| `close()` | Close database connection |
 
-- Node.js 12.x or higher
-- MongoDB 4.x or higher 
+## Type Definitions
+
+Full TypeScript declarations are available for all APIs.
+
+## License
+
+MIT 

@@ -1,7 +1,8 @@
 {
   "name": "@jiangege47/datap",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -10,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "lodash": "^4.17.21",
+    "lowdb": "^7.0.1",
     "mongodb": "^5.0.1"
   },
   "devDependencies": {
