@@ -19,7 +19,8 @@ class LowDbConnector {
       return this.#collections[name];
     }
     this.#collections[name] = await JSONFilePreset(
-      path.join(this.#dbPath, name + ".json")
+      path.join(this.#dbPath, name + ".json"),
+      []
     );
     return this.#collections[name];
   }
