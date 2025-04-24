@@ -101,17 +101,9 @@ export default class LowDbConnector extends DatabaseConnector {
       return null;
     }
 
-    // Simple sort implementation
+    // Apply sorting
     if (sort) {
-      const sortField = Object.keys(sort)[0];
-      const sortOrder = sort[sortField];
-      matches.sort((a, b) => {
-        if (sortOrder === -1) {
-          return String(b[sortField]).localeCompare(String(a[sortField]));
-        } else {
-          return String(a[sortField]).localeCompare(String(b[sortField]));
-        }
-      });
+      this.#applySort(matches, sort);
     }
 
     return matches[0];
@@ -139,17 +131,9 @@ export default class LowDbConnector extends DatabaseConnector {
     // Filter by query
     let results = data.filter((item) => this.#matchQuery(item, query));
 
-    // Sort if specified
+    // Apply sorting
     if (sort) {
-      const sortField = Object.keys(sort)[0];
-      const sortOrder = sort[sortField];
-      results.sort((a, b) => {
-        if (sortOrder === -1) {
-          return String(b[sortField]).localeCompare(String(a[sortField]));
-        } else {
-          return String(a[sortField]).localeCompare(String(b[sortField]));
-        }
-      });
+      this.#applySort(results, sort);
     }
 
     // Skip and limit
@@ -364,5 +348,86 @@ export default class LowDbConnector extends DatabaseConnector {
     }
 
     return true;
+  }
+
+  // Helper method to apply sorting to results
+  #applySort(
+    results: Record<string, any>[],
+    sort: Record<string, 1 | -1>
+  ): void {
+    results.sort((a, b) => {
+      // MongoDB style sorting - iterate through each sort field in order
+      for (const field of Object.keys(sort)) {
+        const sortOrder = sort[field];
+        let valueA = a[field];
+        let valueB = b[field];
+
+        // MongoDB sort order: null/undefined, numbers, strings, objects, arrays
+        // Handle null/undefined values (sort first)
+        if (valueA === null || valueA === undefined) {
+          if (valueB === null || valueB === undefined) {
+            continue; // Both are null/undefined, try next field
+          }
+          return sortOrder === 1 ? -1 : 1; // Nulls first in ascending, last in descending
+        }
+        if (valueB === null || valueB === undefined) {
+          return sortOrder === 1 ? 1 : -1;
+        }
+
+        // Convert to comparable types if needed
+        if (valueA instanceof Date) valueA = valueA.getTime();
+        if (valueB instanceof Date) valueB = valueB.getTime();
+
+        // For ObjectId strings, compare as strings
+        if (
+          typeof valueA === "string" &&
+          typeof valueB === "string" &&
+          ObjectId.isValid(valueA) &&
+          ObjectId.isValid(valueB)
+        ) {
+          const comp = valueA.localeCompare(valueB);
+          if (comp !== 0) return sortOrder === 1 ? comp : -comp;
+          continue;
+        }
+
+        // Compare by type
+        const typeA = typeof valueA;
+        const typeB = typeof valueB;
+
+        if (typeA === typeB) {
+          // Same types can be compared directly
+          let comp = 0;
+          if (typeA === "number") {
+            comp = valueA - valueB;
+          } else if (typeA === "string") {
+            comp = valueA.localeCompare(valueB);
+          } else if (typeA === "boolean") {
+            comp = valueA === valueB ? 0 : valueA ? 1 : -1;
+          } else {
+            // For objects and arrays, convert to string to compare
+            comp = JSON.stringify(valueA).localeCompare(JSON.stringify(valueB));
+          }
+
+          if (comp !== 0) return sortOrder === 1 ? comp : -comp;
+        } else {
+          // Different types - follow MongoDB type precedence
+          // Order: null, number, string, object, array, boolean
+          const typePrecedence: Record<string, number> = {
+            number: 1,
+            string: 2,
+            object: 3,
+            boolean: 4,
+          };
+
+          const precedenceA = typePrecedence[typeA] || 99;
+          const precedenceB = typePrecedence[typeB] || 99;
+
+          const comp = precedenceA - precedenceB;
+          if (comp !== 0) return sortOrder === 1 ? comp : -comp;
+        }
+      }
+
+      return 0; // All sort fields equal
+    });
   }
 }
