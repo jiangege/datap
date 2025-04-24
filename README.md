@@ -9,6 +9,8 @@ Datap is a lightweight database abstraction layer for Node.js that provides a un
 - 🔄 Consistent API across both database types
 - 🔍 Simple query interface with MongoDB-like syntax
 - ⚙️ Easy configuration and setup
+- 📝 Written in TypeScript with full type definitions
+- 🛠️ Built with tsup for optimal bundling
 
 ## Installation
 
@@ -18,7 +20,7 @@ npm install @jiangege47/datap
 
 ## Configuration
 
-```javascript
+```typescript
 import Datap from "@jiangege47/datap";
 
 // Initialize with MongoDB
@@ -55,7 +57,7 @@ Datap({
 
 ### MongoDB Operations
 
-```javascript
+```typescript
 import Datap from "@jiangege47/datap";
 
 // Configure MongoDB connection
@@ -87,7 +89,7 @@ await Datap.mongo.deleteOne("users", "60d21b4667d0d8992e610c85");
 
 ### LowDB Operations
 
-```javascript
+```typescript
 import Datap from "@jiangege47/datap";
 
 // Configure LowDB
@@ -134,6 +136,33 @@ Both MongoDB and LowDB connectors support the following methods:
 | `deleteMany(collection, query)`              | Delete multiple documents        |
 | `count(collection, query)`                   | Count documents matching a query |
 | `close()`                                    | Close database connection        |
+
+## Timestamps
+
+All document operations (create, update, upsert) automatically manage the following timestamp fields:
+
+- `createdAt`: Set when a document is first created
+- `updatedAt`: Updated whenever a document is modified
+
+## Development
+
+### Building the Project
+
+The project uses [tsup](https://github.com/egoist/tsup) for building:
+
+```bash
+# Install dependencies
+npm install
+
+# Development build with watch mode
+npm run dev
+
+# Production build
+npm run build
+
+# Type checking
+npm run typecheck
+```
 
 ## Type Definitions
 

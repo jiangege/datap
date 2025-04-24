@@ -1,20 +1,37 @@
 import path from "path";
 import { JSONFilePreset } from "lowdb/node";
 import { ObjectId } from "mongodb";
+import DatabaseConnector, {
+  CreateOneResult,
+  CreateManyResult,
+  UpdateResult,
+  DeleteResult,
+  UpsertResult,
+} from "./connector";
 
-class LowDbConnector {
-  #collections = {};
-  #dbPath = "";
+interface LowDbResult {
+  data: Record<string, any>[];
+  write: () => Promise<void>;
+}
 
-  constructor(dbPath) {
+interface CollectionMap {
+  [key: string]: LowDbResult;
+}
+
+export default class LowDbConnector extends DatabaseConnector {
+  #collections: CollectionMap = {};
+  #dbPath: string = "";
+
+  constructor(dbPath: string) {
+    super();
     this.#dbPath = dbPath;
   }
 
-  async connect() {
-    // Connection is handled per database in the db method
+  async connect(): Promise<void> {
+    // Connection is handled per database in the collection method
   }
 
-  async collection(name) {
+  async collection(name: string): Promise<LowDbResult> {
     if (this.#collections[name]) {
       return this.#collections[name];
     }
@@ -25,12 +42,18 @@ class LowDbConnector {
     return this.#collections[name];
   }
 
-  async createOne(coll, doc) {
+  async createOne(
+    coll: string,
+    doc: Record<string, any>
+  ): Promise<CreateOneResult> {
     const db = await this.collection(coll);
     const data = db.data || [];
+    const now = new Date();
     const newDoc = {
       ...doc,
       _id: doc._id || new ObjectId().toString(),
+      createdAt: now,
+      updatedAt: now,
     };
     data.push(newDoc);
     db.data = data;
@@ -38,15 +61,21 @@ class LowDbConnector {
     return { insertedId: newDoc._id };
   }
 
-  async createMany(coll, docs) {
+  async createMany(
+    coll: string,
+    docs: Record<string, any>[]
+  ): Promise<CreateManyResult> {
     const db = await this.collection(coll);
     const data = db.data || [];
-    const insertedIds = [];
+    const insertedIds: string[] = [];
+    const now = new Date();
 
     for (const doc of docs) {
       const newDoc = {
         ...doc,
         _id: doc._id || new ObjectId().toString(),
+        createdAt: now,
+        updatedAt: now,
       };
       data.push(newDoc);
       insertedIds.push(newDoc._id);
@@ -57,7 +86,11 @@ class LowDbConnector {
     return { insertedCount: docs.length, insertedIds };
   }
 
-  async findOne(coll, query, sort = { _id: -1 }) {
+  async findOne(
+    coll: string,
+    query: Record<string, any>,
+    sort: Record<string, 1 | -1> = { _id: -1 }
+  ): Promise<Record<string, any> | null> {
     const db = await this.collection(coll);
     const data = db.data || [];
 
@@ -84,13 +117,22 @@ class LowDbConnector {
     return matches[0];
   }
 
-  async findById(coll, id) {
+  async findById(
+    coll: string,
+    id: string
+  ): Promise<Record<string, any> | null> {
     const db = await this.collection(coll);
     const data = db.data || [];
     return data.find((item) => item._id === id) || null;
   }
 
-  async find(coll, query, limit = 0, skip = 0, sort) {
+  async find(
+    coll: string,
+    query: Record<string, any>,
+    limit: number = 0,
+    skip: number = 0,
+    sort?: Record<string, 1 | -1>
+  ): Promise<Record<string, any>[]> {
     const db = await this.collection(coll);
     const data = db.data || [];
 
@@ -122,12 +164,21 @@ class LowDbConnector {
     return results;
   }
 
-  async updateOne(coll, doc) {
+  async updateOne(
+    coll: string,
+    doc: Record<string, any> & { _id?: string; id?: string }
+  ): Promise<UpdateResult> {
     const db = await this.collection(coll);
     const data = db.data || [];
-    const { _id, ...restDoc } = doc;
 
-    const index = data.findIndex((item) => item._id === _id);
+    const { _id, id, ...restDoc } = doc;
+    const documentId = _id || id;
+
+    if (!documentId) {
+      throw new Error("Either _id or id must be provided");
+    }
+
+    const index = data.findIndex((item) => item._id === documentId);
     if (index === -1) {
       return { matchedCount: 0, modifiedCount: 0 };
     }
@@ -135,7 +186,7 @@ class LowDbConnector {
     data[index] = {
       ...data[index],
       ...restDoc,
-      lastModified: new Date(),
+      updatedAt: new Date(),
     };
 
     db.data = data;
@@ -144,17 +195,22 @@ class LowDbConnector {
     return { matchedCount: 1, modifiedCount: 1 };
   }
 
-  async updateMany(coll, q, doc) {
+  async updateMany(
+    coll: string,
+    query: Record<string, any>,
+    doc: Record<string, any>
+  ): Promise<UpdateResult> {
     const db = await this.collection(coll);
     const data = db.data || [];
+    const now = new Date();
 
     let modifiedCount = 0;
     for (let i = 0; i < data.length; i++) {
-      if (this.#matchQuery(data[i], q)) {
+      if (this.#matchQuery(data[i], query)) {
         data[i] = {
           ...data[i],
           ...doc,
-          lastModified: new Date(),
+          updatedAt: now,
         };
         modifiedCount++;
       }
@@ -166,9 +222,13 @@ class LowDbConnector {
     return { matchedCount: modifiedCount, modifiedCount };
   }
 
-  async upsertOne(coll, doc) {
+  async upsertOne(
+    coll: string,
+    doc: Record<string, any> & { key?: string }
+  ): Promise<UpsertResult> {
     const db = await this.collection(coll);
     const data = db.data || [];
+    const now = new Date();
 
     // Check if document has _id
     if (doc._id) {
@@ -179,7 +239,7 @@ class LowDbConnector {
         data[index] = {
           ...data[index],
           ...doc,
-          lastModified: new Date(),
+          updatedAt: now,
         };
         db.data = data;
         await db.write();
@@ -198,7 +258,7 @@ class LowDbConnector {
         data[index] = {
           ...data[index],
           ...doc,
-          lastModified: new Date(),
+          updatedAt: now,
         };
         db.data = data;
         await db.write();
@@ -210,15 +270,21 @@ class LowDbConnector {
     const newDoc = {
       ...doc,
       _id: doc._id || new ObjectId().toString(),
-      lastModified: new Date(),
+      createdAt: now,
+      updatedAt: now,
     };
     data.push(newDoc);
     db.data = data;
     await db.write();
-    return { upsertedId: newDoc._id, upsertedCount: 1 };
+    return {
+      upsertedId: newDoc._id,
+      upsertedCount: 1,
+      matchedCount: 0,
+      modifiedCount: 0,
+    };
   }
 
-  async deleteOne(coll, id) {
+  async deleteOne(coll: string, id: string): Promise<DeleteResult> {
     const db = await this.collection(coll);
     const data = db.data || [];
 
@@ -234,12 +300,15 @@ class LowDbConnector {
     return { deletedCount: 1 };
   }
 
-  async deleteMany(coll, q) {
+  async deleteMany(
+    coll: string,
+    query: Record<string, any>
+  ): Promise<DeleteResult> {
     const db = await this.collection(coll);
     let data = db.data || [];
 
     const initialLength = data.length;
-    data = data.filter((item) => !this.#matchQuery(item, q));
+    data = data.filter((item) => !this.#matchQuery(item, query));
 
     const deletedCount = initialLength - data.length;
 
@@ -249,24 +318,24 @@ class LowDbConnector {
     return { deletedCount };
   }
 
-  async count(coll, q) {
+  async count(coll: string, query?: Record<string, any>): Promise<number> {
     const db = await this.collection(coll);
     const data = db.data || [];
 
-    if (!q) {
+    if (!query) {
       return data.length;
     }
 
-    return data.filter((item) => this.#matchQuery(item, q)).length;
+    return data.filter((item) => this.#matchQuery(item, query)).length;
   }
 
-  async close() {
+  async close(): Promise<void> {
     // No connection to close with lowdb, but we'll reset the collections
     this.#collections = {};
   }
 
   // Helper method to match a document against a query
-  #matchQuery(doc, query) {
+  #matchQuery(doc: Record<string, any>, query: Record<string, any>): boolean {
     if (!query || Object.keys(query).length === 0) {
       return true;
     }
@@ -293,5 +362,3 @@ class LowDbConnector {
     return true;
   }
 }
-
-export default LowDbConnector;
