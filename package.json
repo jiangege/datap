@@ -1,6 +1,6 @@
 {
   "name": "@jiangege47/datap",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "",
   "type": "module",
   "main": "dist/index.js",
@@ -36,5 +36,12 @@
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",
     "vitest": "^1.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jiangege/datap.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jiangege/datap/issues"
   }
 }
