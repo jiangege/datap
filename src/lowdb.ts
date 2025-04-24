@@ -353,6 +353,10 @@ export default class LowDbConnector extends DatabaseConnector {
           return false;
         if (value.$nin !== undefined && value.$nin.includes(doc[key]))
           return false;
+        if (value.$regex !== undefined) {
+          const regex = new RegExp(value.$regex, value.$options || "");
+          if (!regex.test(String(doc[key]))) return false;
+        }
       } else {
         // Simple equality check
         if (doc[key] !== value) return false;
